@@ -1,0 +1,38 @@
+node,logFC,group
+root,NA,NA
+heart development,NA,NA
+phosphorylation,NA,NA
+vasculature development,NA,NA
+blood vessel development,NA,NA
+tissue morphogenesis,NA,NA
+cell adhesion,NA,NA
+PTK2,-1.000709547,heart development
+GNA13,0.890683813,heart development
+LEPR,-0.553856214,heart development
+APOE,-0.956726373,heart development
+CXCR4,1.283265268,heart development
+CDH5,-0.51477973,phosphorylation
+PLXND1,-1.48317114,phosphorylation
+ECSCR,-1.12191613,phosphorylation
+HBEGF,1.136809987,phosphorylation
+AMOT,1.08778812,phosphorylation
+ACVRL1,0.509690293,vasculature development
+FGF2,-0.585969297,vasculature development
+MAP2K1,-0.462879817,vasculature development
+NRP1,-1.141231543,vasculature development
+GJA1,-0.81794802,vasculature development
+GJA5,-2.454250023,blood vessel development
+CERKL,0.862400057,blood vessel development
+MIB1,-0.289969767,blood vessel development
+TGFBR2,0.998477288,blood vessel development
+TGFBR3,1.21053663,blood vessel development
+TGFB2,2.303174833,tissue morphogenesis
+TTN,-0.663359973,tissue morphogenesis
+GAB1,0.879589395,tissue morphogenesis
+ATP6V0A1,0.984753306,tissue morphogenesis
+NRP2,-1.515317303,tissue morphogenesis
+SLC22A5,0.503290817,cell adhesion
+VANGL2,0.522056899,cell adhesion
+ITGB1,-0.320847591,cell adhesion
+PKD2,-0.684857057,cell adhesion
+SMAD3,0.888539627,cell adhesion

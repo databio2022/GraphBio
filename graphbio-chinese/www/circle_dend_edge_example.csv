@@ -1,0 +1,37 @@
+from,to
+root,heart development
+root,phosphorylation
+root,vasculature development
+root,blood vessel development
+root,tissue morphogenesis
+root,cell adhesion
+heart development,PTK2
+heart development,GNA13
+heart development,LEPR
+heart development,APOE
+heart development,CXCR4
+phosphorylation,CDH5
+phosphorylation,PLXND1
+phosphorylation,ECSCR
+phosphorylation,HBEGF
+phosphorylation,AMOT
+vasculature development,ACVRL1
+vasculature development,FGF2
+vasculature development,MAP2K1
+vasculature development,NRP1
+vasculature development,GJA1
+blood vessel development,GJA5
+blood vessel development,CERKL
+blood vessel development,MIB1
+blood vessel development,TGFBR2
+blood vessel development,TGFBR3
+tissue morphogenesis,TGFB2
+tissue morphogenesis,TTN
+tissue morphogenesis,GAB1
+tissue morphogenesis,ATP6V0A1
+tissue morphogenesis,NRP2
+cell adhesion,SLC22A5
+cell adhesion,VANGL2
+cell adhesion,ITGB1
+cell adhesion,PKD2
+cell adhesion,SMAD3
