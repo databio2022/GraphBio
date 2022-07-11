@@ -22,7 +22,7 @@ corrscatterUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also support txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -44,15 +44,51 @@ corrscatterUI <- function(id) {
                multiple = FALSE,
                selected = "color1"
             ),
+          tags$strong("Regression Line"),
+          switchInput(
+             inputId = ns("line"),
+             value = TRUE
+          ),  
           numericInput(ns("w"), label = "Figure Width", value = 8),
           numericInput(ns("h"), label = "Figure Height", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="Download PDF Figure",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
+                  )
         )
     )
   )
@@ -97,42 +133,92 @@ corrscatterServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
-        d=read.table(input$file1$datapath,
-          header = TRUE,
-          sep=",",
-          check.names=FALSE,
-          quote = "",
-          comment.char="",
-          fill=TRUE
-          )
+        if(file_ext(input$file1$datapath) == "csv"){
+          d=read.table(input$file1$datapath,
+            header = TRUE,
+            sep=",",
+            check.names=FALSE,
+            quote = "",
+            comment.char="",
+            fill=TRUE
+            )
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,
+            header = TRUE,
+            sep="\t",
+            check.names=FALSE,
+            quote = "",
+            comment.char="",
+            fill=TRUE
+            )
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          d=readxl::read_xls(input$file1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          d=readxl::read_xlsx(input$file1$datapath)
+          d=as.data.frame(d)
+        }
         if(is.numeric(d[,1])){
           if(input$color == "color1"){
-            p=ggscatter(d, x = names(d)[1], y = names(d)[2],
-               color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
-               add = "reg.line",  # Add regressin line
-               add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
-               conf.int = TRUE, # Add confidence interval
-               cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
-               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
-               )
+            if(input$line){
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "reg.line",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )
+            }else{
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "none",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )              
+            }
           }else if(input$color == "color2"){
-            p=ggscatter(d, x = names(d)[1], y = names(d)[2],
-               color = "dodgerblue", shape = 19, size = 3, # Points color, shape and size
-               add = "reg.line",  # Add regressin line
-               add.params = list(color = "dodgerblue", fill = "darkorange1"), # Customize reg. line
-               conf.int = TRUE, # Add confidence interval
-               cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
-               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
-               )
+            if(input$line){
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "reg.line",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )
+            }else{
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "none",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )              
+            }
           }else if (input$color == "color3"){
-            p=ggscatter(d, x = names(d)[1], y = names(d)[2],
-               color = "#56B4E9", shape = 19, size = 3, # Points color, shape and size
-               add = "reg.line",  # Add regressin line
-               add.params = list(color = "#56B4E9", fill = "#E69F00"), # Customize reg. line
-               conf.int = TRUE, # Add confidence interval
-               cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
-               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
-               )
+            if(input$line){
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "reg.line",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )
+            }else{
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "none",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )              
+            }
           }
           vals$p=p
           p
@@ -151,33 +237,67 @@ corrscatterServer <- function(id) {
           )
 
         if(input$color == "color1"){
-            p=ggscatter(d, x = names(d)[1], y = names(d)[2],
-               color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
-               add = "reg.line",  # Add regressin line
-               add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
-               conf.int = TRUE, # Add confidence interval
-               cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
-               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
-               )
+            if(input$line){
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "reg.line",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )
+            }else{
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "none",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )              
+            }
         }else if(input$color == "color2"){
-            p=ggscatter(d, x = names(d)[1], y = names(d)[2],
-               color = "dodgerblue", shape = 19, size = 3, # Points color, shape and size
-               add = "reg.line",  # Add regressin line
-               add.params = list(color = "dodgerblue", fill = "darkorange1"), # Customize reg. line
-               conf.int = TRUE, # Add confidence interval
-               cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
-               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
-               )
+            if(input$line){
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "reg.line",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )
+            }else{
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "none",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )              
+            }
         }else if (input$color == "color3"){
-            p=ggscatter(d, x = names(d)[1], y = names(d)[2],
-               color = "#56B4E9", shape = 19, size = 3, # Points color, shape and size
-               add = "reg.line",  # Add regressin line
-               add.params = list(color = "#56B4E9", fill = "#E69F00"), # Customize reg. line
-               conf.int = TRUE, # Add confidence interval
-               cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
-               cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
-               )
+            if(input$line){
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "reg.line",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )
+            }else{
+              p=ggscatter(d, x = names(d)[1], y = names(d)[2],
+                 color = "#00AFBB", shape = 19, size = 3, # Points color, shape and size
+                 add = "none",  # Add regressin line
+                 add.params = list(color = "#00AFBB", fill = "#FC4E07"), # Customize reg. line
+                 conf.int = TRUE, # Add confidence interval
+                 cor.coef = TRUE, # Add correlation coefficient. see ?stat_cor
+                 cor.coeff.args = list(method = "pearson", label.x = 3, label.sep = "\n")
+                 )              
+            }
         }
+        vals$p=p
         p
       })
 
@@ -203,6 +323,31 @@ corrscatterServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="corr_scatter.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="corr_scatter.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="corr_scatter.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

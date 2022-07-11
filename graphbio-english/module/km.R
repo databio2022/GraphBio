@@ -25,7 +25,7 @@ kmUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also support txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -43,19 +43,50 @@ kmUI <- function(id) {
           pickerInput(
                inputId = ns("color"),
                label = "Select Colors", 
-               choices = paste0("color", 1),
+               choices = paste0("color", 1:3),
                multiple = FALSE,
                selected = "color1"
             ),
           numericInput(ns("w"), label = "Figure Width", value = 8),
           numericInput(ns("h"), label = "Figure Height", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="Download PDF Figure",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
+                  )
         )
     )
   )
@@ -70,7 +101,7 @@ kmServer <- function(id) {
       dataModal <- function(failed = FALSE) {
         d=lung[,c(5,2,3)]
         modalDialog(
-          span('First column represents class,second column represents survival time，third column represents survival status.'),
+          span('First column represents class,second column represents survival time，third column represents survival status.Only support two groups comparsion.'),
           tags$hr(),
           renderTable(d[1:20,],rownames=FALSE),
           easyClose=TRUE,
@@ -92,10 +123,24 @@ kmServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           d=read.table(input$file1$datapath,header=T,sep=",",comment.char="",quote="",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=T,sep="\t",comment.char="",quote="",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          d=readxl::read_xls(input$file1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          d=readxl::read_xlsx(input$file1$datapath)
+          d=as.data.frame(d)
+        }
           fit <- survfit(Surv(time, status) ~ sex, data = lung)
           if(input$color == "color1"){
                 p=ggsurvplot(fit,pval = TRUE)
+          }else if(input$color == "color2"){
+                p=ggsurvplot(fit,pval = TRUE,palette="npg")
+          }else if(input$color == "color3"){
+                p=ggsurvplot(fit,pval = TRUE,palette="jco")
           }
           vals$p=p
           p
@@ -107,7 +152,12 @@ kmServer <- function(id) {
         fit <- survfit(Surv(time, status) ~ sex, data = lung)
         if(input$color == "color1"){
               p=ggsurvplot(fit,pval = TRUE)
+        }else if(input$color == "color2"){
+                p=ggsurvplot(fit,pval = TRUE,palette="npg")
+        }else if(input$color == "color3"){
+                p=ggsurvplot(fit,pval = TRUE,palette="jco")
         }
+        vals$p=p
         p
       })
 
@@ -133,6 +183,31 @@ kmServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="survplot.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="survplot.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="survplot.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

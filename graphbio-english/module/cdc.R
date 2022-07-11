@@ -23,7 +23,7 @@ cdcUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also support txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -53,13 +53,44 @@ cdcUI <- function(id) {
           ),
           numericInput(ns("w"), label = "Figure Width", value = 8),
           numericInput(ns("h"), label = "Figure Height", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="Download PDF Figure",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
+                  )
         )
     )
   )
@@ -82,7 +113,7 @@ cdcServer <- function(id) {
           )
         d[is.na(d)] <- ""
         modalDialog(
-          span('Support two groups or more'),
+          span('Support two groups or more.'),
           tags$hr(),
           renderTable(d[1:20,],rownames=FALSE),
           easyClose=TRUE,
@@ -104,7 +135,17 @@ cdcServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           d=read.table(input$file1$datapath,header=T,sep=",",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=T,sep="\t",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          d=readxl::read_xls(input$file1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          d=readxl::read_xlsx(input$file1$datapath)
+          d=as.data.frame(d)
+        }
           if(ncol(d) == 2){
             x=d[!is.na(d[,1]),1]
             y=d[!is.na(d[,2]),2]
@@ -204,6 +245,31 @@ cdcServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="cdcplot.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="cdcplot.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="cdcplot.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

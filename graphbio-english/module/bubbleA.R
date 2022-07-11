@@ -23,7 +23,7 @@ bubbleUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also support txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -102,7 +102,18 @@ bubbleServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
-        d3=r2d3(data = read.csv(input$file1$datapath), d3_version = 3, script = "./js/d3js/my_bubble.js")
+        if(file_ext(input$file1$datapath) == "csv"){
+          d=read.table(input$file1$datapath,header=T,sep=",",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=T,sep="\t",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          d=readxl::read_xls(input$file1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          d=readxl::read_xlsx(input$file1$datapath)
+          d=as.data.frame(d)
+        }
+        d3=r2d3(data = d, d3_version = 3, script = "./js/d3js/my_bubble.js")
         vals$p=d3
         d3
       })

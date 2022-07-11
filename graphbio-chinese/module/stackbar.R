@@ -26,7 +26,7 @@ stackbarUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("上传文件(csv格式或逗号分隔txt文件)"),
+          tags$h5("上传文件(支持csv、txt、xls、xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "查看示例文件",
@@ -50,13 +50,44 @@ stackbarUI <- function(id) {
             ),
           numericInput(ns("w"), label = "下载图片宽度", value = 6),
           numericInput(ns("h"), label = "下载图片高度", value = 6),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="下载PDF图片",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "图像分辨率", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="下载图片",
+                    status="success"
+                  )
         )
     )
   )
@@ -98,7 +129,17 @@ stackbarServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plota <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           d=read.table(input$file1$datapath,header=TRUE,sep=",",comment.char = "",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=TRUE,sep="\t",comment.char = "",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          d=read.table(input$file1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          d=read.table(input$file1$datapath)
+          d=as.data.frame(d)
+        }
           colnames(d)=c("sample","type")
           d=d %>% group_by(sample,type) %>% summarise(n=n()) %>% mutate(freq=n/sum(n)) %>% select(-n)
           if(input$color == "color1"){
@@ -161,6 +202,7 @@ stackbarServer <- function(id) {
                 ylab("Frequency")+
                 xlab("")+theme(legend.position = "right")
           }
+          vals$p=p
           p
       })
 
@@ -188,6 +230,31 @@ stackbarServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="stack_bar.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="stack_bar.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="stack_bar.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

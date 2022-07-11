@@ -11,9 +11,9 @@ volcanoUI <- function(id) {
   tagList(
     fluidRow(
         box(title="火山图",solidHeader=TRUE,status='primary',background = "white",
-            plotOutput(ns("plot"),height=600) %>% withSpinner(color="#0dc5c1",type = 5,size=0.5),width=8,
-                    tags$hr(),
-                    tags$h6("该工具使用了R包ggplot2。如果在您的研究工作中使用到该工具，请引用该网址(GraphBio: www.graphbio1.com)和ggplot2包。")
+            plotOutput(ns("plot"),height=600) %>% withSpinner(color="#0dc5c1",type = 5,size=0.5),width=8
+                  #  tags$hr(),
+                  #  tags$h6("该工具使用了R包ggplot2。如果在您的研究工作中使用到该工具，请引用该网址(GraphBio: www.graphbio1.com)和ggplot2包。")
             ),
         box(width=4,
           # Input: Select a file ----
@@ -25,7 +25,7 @@ volcanoUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("上传文件(csv格式或逗号分隔txt文件)"),
+          tags$h5("上传文件(支持csv、txt、xls、xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "查看示例文件",
@@ -45,19 +45,52 @@ volcanoUI <- function(id) {
           pickerInput(
                inputId = ns("color"),
                label = "选择颜色", 
-               choices = paste0("color", 1),
+               choices = paste0("color", 1:3),
                multiple = FALSE,
                selected = "color1"
             ),
+          numericInput(ns("ps"), label = "点大小", value = 2),
+          numericInput(ns("ls"), label = "标签大小", value = 4),
           numericInput(ns("w"), label = "下载图片宽度", value = 8),
           numericInput(ns("h"), label = "下载图片高度", value = 9),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="下载PDF图片",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "图像分辨率", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="下载图片",
+                    status="success"
+                  )
         )
     )
   )
@@ -96,7 +129,21 @@ volcanoServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep=",",check.names=FALSE,quote="",comment.char="",fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep="\t",check.names=FALSE,quote="",comment.char="",fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+                d=readxl::read_xls(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }else if(file_ext(input$file1$datapath) == "xlsx"){
+                d=readxl::read_xlsx(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }
           if(ncol(d) == 3){
               names(d)[1]=c("log2FC")
               names(d)[3]=c("label")
@@ -109,16 +156,24 @@ volcanoServer <- function(id) {
               down_num=nrow(d[d$class == "DOWN",])
               d$class <- as.factor(d$class) # col 3 class
               xval=ceiling(max(abs(d[,1])))
-              colors <- c("UP"="#FC4E07", "none"="#E7B800", "DOWN"="#00AFBB")
+              if(input$color == "color1"){
+                colors <- c("UP"="#FC4E07", "none"="#E7B800", "DOWN"="#00AFBB")
+              }else if(input$color == "color2"){
+                colors <- c("UP"="#E64B3599", "none"="#4DBBD599", "DOWN"="#00A08799")
+              }else if(input$color == "color3"){
+                colors <- c("UP"="#CD534C99", "none"="#86868699", "DOWN"="#0073C299")
+              }
+              
               p=ggplot(data=d, aes(x=log2FC,y=log10,color=class,label=label)) + 
-                  geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"))+
-                  geom_point(data = d[d$class=="none",],aes(y=log10,color="none"))+
-                  geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"))+
+                  geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"),size=input$ps)+
+                  geom_point(data = d[d$class=="none",],aes(y=log10,color="none"),size=input$ps)+
+                  geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"),size=input$ps)+
                   scale_color_manual(values = colors)+
                   ylab(paste0("-log10 ",names(d)[2]))+xlab("Log2FoldChange")+
                   theme_pubr(base_size = 12,border=TRUE)+geom_hline(yintercept=-log10(input$pval), linetype="dashed", 
                       color = "black", size=0.5)+geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", 
                       color = "black", size=0.5)+geom_label_repel(
+                      size=input$ls,
                       fontface="bold",
                       color="purple",
                       box.padding=unit(1, "lines"),
@@ -137,11 +192,17 @@ volcanoServer <- function(id) {
               down_num=nrow(d[d$class == "DOWN",])
               d$class <- as.factor(d$class) # col 3 class
               xval=ceiling(max(abs(d[,1])))
-              colors <- c("UP"="#FC4E07", "none"="#E7B800", "DOWN"="#00AFBB")
+              if(input$color == "color1"){
+                colors <- c("UP"="#FC4E07", "none"="#E7B800", "DOWN"="#00AFBB")
+              }else if(input$color == "color2"){
+                colors <- c("UP"="#E64B3599", "none"="#4DBBD599", "DOWN"="#00A08799")
+              }else if(input$color == "color3"){
+                colors <- c("UP"="#CD534C99", "none"="#86868699", "DOWN"="#0073C299")
+              }
               p=ggplot(data=d, aes(x=log2FC,y=log10,color=class)) + 
-                  geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"))+
-                  geom_point(data = d[d$class=="none",],aes(y=log10,color="none"))+
-                  geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"))+
+                  geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"),size=input$ps)+
+                  geom_point(data = d[d$class=="none",],aes(y=log10,color="none"),size=input$ps)+
+                  geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"),size=input$ps)+
                   scale_color_manual(values = colors)+
                   ylab(paste0("-log10 ",names(d)[2]))+xlab("Log2FoldChange")+
                   theme_pubr(base_size = 12,border=TRUE)+geom_hline(yintercept=-log10(input$pval), linetype="dashed", 
@@ -169,16 +230,23 @@ volcanoServer <- function(id) {
           down_num=nrow(d[d$class == "DOWN",])
           d$class <- as.factor(d$class) # col 3 class
           xval=ceiling(max(abs(d[,1])))
-          colors <- c("UP"="#FC4E07", "none"="#E7B800", "DOWN"="#00AFBB")
+              if(input$color == "color1"){
+                colors <- c("UP"="#FC4E07", "none"="#E7B800", "DOWN"="#00AFBB")
+              }else if(input$color == "color2"){
+                colors <- c("UP"="#E64B3599", "none"="#4DBBD599", "DOWN"="#00A08799")
+              }else if(input$color == "color3"){
+                colors <- c("UP"="#CD534C99", "none"="#86868699", "DOWN"="#0073C299")
+              }
           p=ggplot(data=d, aes(x=log2FC,y=log10,color=class,label=label)) + 
-              geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"))+
-              geom_point(data = d[d$class=="none",],aes(y=log10,color="none"))+
-              geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"))+
+              geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"),size=input$ps)+
+              geom_point(data = d[d$class=="none",],aes(y=log10,color="none"),size=input$ps)+
+              geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"),size=input$ps)+
               scale_color_manual(values = colors)+
               ylab(paste0("-log10 ",names(d)[2]))+xlab("Log2FoldChange")+
               theme_pubr(base_size = 12,border=TRUE)+geom_hline(yintercept=-log10(input$pval), linetype="dashed", 
                   color = "black", size=0.5)+geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", 
                   color = "black", size=0.5)+geom_label_repel(
+                  size=input$ls,
                   fontface="bold",
                   color="purple",
                   box.padding=unit(1, "lines"),
@@ -186,6 +254,7 @@ volcanoServer <- function(id) {
                   segment.colour = "purple",segment.size = 0.5,segment.alpha = 0.5,max.overlaps = Inf)+geom_point(data = d[d$label!="",], color = "purple")+
                   annotate(geom = 'text', label = paste0('UP_Number: ', up_num), x = Inf, y = Inf, hjust = 1.1, vjust = 1.5)+
                   annotate(geom = 'text', label = paste0('DOWN_Number: ', down_num), x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5)+labs(color = "class")
+          vals$p=p
           p
       })
 
@@ -211,6 +280,31 @@ volcanoServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="volcano.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="volcano.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="volcano.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

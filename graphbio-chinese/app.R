@@ -80,6 +80,7 @@ ui <- dashboardPage(
       ),
       sidebarMenu(id="sidebar",
         sidebarHeader("基因测序数据可视化"),
+        menuItem("使用说明", tabName = "help", icon = ionicon(name="information-circle")),
         menuItem("联系我们", tabName = "contact", icon = ionicon(name="call")),
         menuItem("常见问题", tabName = "faq", icon = ionicon(name="help-circle")),
         menuItem("热图", tabName = "heatmap", icon = ionicon(name="arrow-forward"),selected=TRUE),
@@ -128,7 +129,7 @@ ui <- dashboardPage(
             tabItem(tabName = "heatmap",
             fluidRow(
                 box(title="热图",solidHeader=TRUE,status='primary',background = "white",align="center",
-                    tags$h4("20220505更新：新增了【堆叠柱状图】"),
+                    #tags$h4("20220505更新：新增了【堆叠柱状图】"),
                     plotOutput("plot",height=600) %>% withSpinner(color="#0dc5c1",type = 5,size=0.5),width=8
                     ),
                 box(width=4,
@@ -145,16 +146,16 @@ ui <- dashboardPage(
                      label = "运行例子",
                      style = "fill", 
                       color = "warning",
-                      size = "sm",
+                      size = "sm"
                   ),  
                   tags$hr(),                
-                  tags$h5("上传基因表达文件(csv格式或逗号分隔txt文件)"),
+                  tags$h5("上传基因表达文件(支持csv、txt、xls、xlsx)"),
                   actionBttn(
                      inputId = "show",
                      label = "查看示例文件",
                      style = "fill", 
                       color = "primary",
-                      size = "sm",
+                      size = "sm"
                   ),
                   tags$br(),
                   tags$br(),
@@ -163,13 +164,13 @@ ui <- dashboardPage(
                             accept = c("text/csv",
                                      "text/comma-separated-values,text/plain",
                                      ".csv")),
-                  tags$h5("上传实验分组信息文件(csv格式或逗号分隔txt文件,可选)"),
+                  tags$h5("上传实验分组信息文件(支持csv、txt、xls、xlsx,可选)"),
                   actionBttn(
                      inputId = "show1",
                      label = "查看示例文件",
                      style = "fill", 
                       color = "primary",
-                      size = "sm",
+                      size = "sm"
                   ),
                   tags$br(),
                   tags$br(),
@@ -206,18 +207,73 @@ ui <- dashboardPage(
                    ),
                   numericInput("w", label = "下载图片宽度", value = 9),
                   numericInput("h", label = "下载图片高度", value = 6),
-                  downloadBttn(
-                    outputId = "pdf",
-                    label="下载PDF图片",
-                    style = "fill",
-                    color = "success",
-                    size='sm'
+                  numericInput("ppi", label = "图像分辨率", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = "pdf",
+                      label="PDF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = "png",
+                      label="PNG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = "jpeg",
+                      label="JPEG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = "tiff",
+                      label="TIFF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="下载图片",
+                    status="success"
                   )
                 )
 
              
             )
             ),
+          tabItem(tabName = "help",
+            fluidRow(box(width=12,
+            title="使用说明",solidHeader=TRUE,status='primary',background = "white",height="100%",
+            tags$h2("使用说明"),
+            tags$hr(),
+            tags$p("GraphBio包含了众多流行的组学数据可视化功能模块，旨在以一种简单高效的方式帮助科研人员快速完成数据可视化和数据探索。GraphBio每个功能模块都遵循了相同的设计模式，便于用户快速使用新的功能模块。
+            这里，我们以热图绘制为例来说明GraphBio的使用方法。
+              首先，我们在GraphBio左侧栏点击【热图】模块，然后便可看到画图区域和右侧的参数设置面板。"),
+            tags$img(src="x1.png",width="50%",height="50%"),
+            tags$p("在上传文件之前，我们需要在右侧参数面板栏点击【查看示例文件】，得到需要上传文件的内容格式。"),
+            tags$img(src="format.png",width="50%",height="50%"),
+            tags$p("从参考示例文件可以看出，待上传文件需要是一个基因表达矩阵（当然其实只要是这样格式的一个数值矩阵即可，并不限制于基因），行为基因，列为样本，然后我们可以用Excel来准备作图数据。"),
+            tags$img(src="heatmap1.png",width="50%",height="50%"),
+            tags$p("文件另存为csv格式（不是csv UTF8）, 制表符分隔txt，xls，xlsx格式亦可。然后将csv文件上传至GraphBio，一旦上传完成，便会自动生成图片。"),
+            tags$img(src="show.png",width="50%",height="50%"),
+            tags$p("此外，我们可以对样本增加注释条，这时需准备一个样本注释文件，注意样本的行顺序需与表达文件列顺序保持一致，如下，我们给出了样本所属组信息："),
+            tags$img(src="heatmap2.png"),
+            tags$p("同样，另存为csv格式，然后上传GraphBio，即可在图形上方增加注释条。"),
+            tags$img(src="show1.png",width="50%",height="50%"),
+            tags$p("最后，用户可根据需要对图形进行一些自定义调整，比如颜色，标签，聚类方法等，做好后，可以通过点击【下载图片】按钮获得需要的图片格式。"),
+            tags$img(src="f1.png",width="50%",height="50%")
+            )
+            )
+          ),
           tabItem(tabName = "contact",
             fluidRow(box(width=12,
             title="联系我们",solidHeader=TRUE,status='primary',background = "white",height=800,
@@ -239,7 +295,7 @@ ui <- dashboardPage(
             fluidRow(
             box(width=4,background = "white",status='primary',title="微信公众号",solidHeader=TRUE,tags$img(src = "public.jpg", width = "300",height="300",style= "display:block;margin:auto;")),
             box(width=4,background = "white",status='primary',title="视频号",solidHeader=TRUE,tags$img(src = "vedio.png", width = "300",height="300",style= "display:block;margin:auto;")),
-            box(width=4,background = "white",status='primary',title="人工服务（付费，问题咨询每次10元）",solidHeader=TRUE,tags$img(src = "contact.png", width = "300",height="300",style= "display:block;margin:auto;")))
+            box(width=4,background = "white",status='primary',title="微信",solidHeader=TRUE,tags$img(src = "contact.png", width = "300",height="300",style= "display:block;margin:auto;")))
               )
             )
           ),
@@ -256,7 +312,8 @@ ui <- dashboardPage(
             tags$p("6. 示例文件仅展示上传文件所需格式，所以只显示了部分作图数据，并不是生成示例图的全部数据。"),
             tags$p("7. 若需要对下载图中的文字和颜色进行修改，可通过Adobe Illustrator或Adobe Acrobat软件进行编辑。"),
             tags$p("8. 文件内容不能有逗号，单双引号等异常符号，否则会报错。"),
-            tags$p("9. 第一列基因名字不能有重复。")
+            tags$p("9. 第一列基因名字不能有重复。"),
+            tags$p("10. 单个上传文件大小不能超过5MB。")
               )
             )
           ),
@@ -337,7 +394,7 @@ server <- function(input, output, session) {
 
       dataModalx <- function(failed = FALSE) {
         modalDialog(
-          span('注意：样本顺序需与表达矩阵样本顺序保持一致！'),
+          span('注意：样本顺序需与表达矩阵样本顺序保持一致！支持两组或更多组。'),
           tags$hr(),
           renderTable(example1[1:6,],rownames=FALSE),
           easyClose=TRUE,
@@ -366,6 +423,7 @@ server <- function(input, output, session) {
 
       #main content
       #example
+      vals=reactiveValues()
       heatmape <- reactive({
             d=example
             d=d[which(apply(d,1,sd) > 0),]
@@ -431,6 +489,7 @@ server <- function(input, output, session) {
                         p=pheatmap(d,scale="none",annotation_col=annotation_col,color=colorRampPalette(c("navy", "white", "firebrick3"))(1000),show_rownames=input$rowname,show_colnames=input$colname,cluster_cols=F,border_color=NA,clustering_method="average",clustering_distance_cols="correlation",clustering_distance_rows="correlation")
                                 }                   
                 }
+            vals$p=p
             p
         })
 
@@ -439,18 +498,49 @@ server <- function(input, output, session) {
               heatmape()
         })
       })
+
       #input file
-      vals=reactiveValues()
+      
       heatmap <- reactive({
             req(input$file1)
-            d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep=",",quote="",comment.char = "",check.names=FALSE)
+            if(file_ext(input$file1$datapath) == "csv"){
+                d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep=",",quote="",comment.char = "",check.names=FALSE)
+            }else if(file_ext(input$file1$datapath) == "txt"){
+                d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep="\t",quote="",comment.char = "",check.names=FALSE)
+            }else if(file_ext(input$file1$datapath) == "xls"){
+                d=readxl::read_xls(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }else if(file_ext(input$file1$datapath) == "xlsx"){
+                d=readxl::read_xlsx(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }
+            
             d=d[which(apply(d,1,sd) > 0),]
             d=t(scale(t(d)))
             d[d > 1.5]=1.5
             d[d < -1.5]=-1.5
             vals$d=d
             if(!is.null(input$file2$datapath)){
+              if(file_ext(input$file2$datapath) == "csv"){
                 grp=read.table(input$file2$datapath,header=TRUE,row.names=1,sep=",",quote="",comment.char = "",check.names=FALSE)
+              }else if(file_ext(input$file2$datapath) == "txt"){
+                grp=read.table(input$file2$datapath,header=TRUE,row.names=1,sep="\t",quote="",comment.char = "",check.names=FALSE)
+              }else if(file_ext(input$file2$datapath) == "xls"){
+                grp=readxl::read_xls(input$file2$datapath)
+                grp=as.data.frame(grp)
+                rownames(grp)=grp[,1]
+                grp=grp[,-1]
+              }else if(file_ext(input$file2$datapath) == "xlsx"){
+                grp=readxl::read_xlsx(input$file2$datapath)
+                grp=as.data.frame(grp)
+                rownames(grp)=grp[,1]
+                grp=grp[,-1]
+              }
+                
                 annotation_col = data.frame(name=factor(grp$group))
                 rownames(annotation_col) = colnames(d)
                 #pheatmap(d,scale="none",annotation_col = annotation_col,color=colorRampPalette(viridis(3))(100),show_rownames=F,show_colnames=F,cluster_method="average",clustering_distance_cols="correlation",clustering_distance_rows="correlation")
@@ -586,6 +676,30 @@ server <- function(input, output, session) {
             dev.off()
           }
         )
+      output$png <- downloadHandler(
+        filename="heatmap.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="heatmap.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="heatmap.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
 
 }
 

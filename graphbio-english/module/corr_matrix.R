@@ -24,7 +24,7 @@ corrmUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also support txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -43,19 +43,50 @@ corrmUI <- function(id) {
           pickerInput(
                inputId = ns("color"),
                label = "Select Colors", 
-               choices = paste0("color", 1),
+               choices = paste0("color", 1:2),
                multiple = FALSE,
                selected = "color1"
             ),
           numericInput(ns("w"), label = "Figure Width", value = 8),
           numericInput(ns("h"), label = "Figure Height", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="Download PDF Figure",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
+                  )
         )
     )
   )
@@ -94,11 +125,28 @@ corrmServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plota <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           d=read.table(input$file1$datapath,header=T,sep=",",row.names=1,comment.char="",quote="",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=T,sep="\t",row.names=1,comment.char="",quote="",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+                d=readxl::read_xls(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }else if(file_ext(input$file1$datapath) == "xlsx"){
+                d=readxl::read_xlsx(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }
           corr <- round(cor(d), 2) # data frame
           if(input$color == "color1"){
             p=ggcorrplot(corr, hc.order = TRUE, type = "lower",
                outline.col = "white", colors = c("#6D9EC1", "white", "#E46726"),lab = T,lab_size = input$labelsize)
+          }else if(input$color == "color2"){
+            p=ggcorrplot(corr, hc.order = TRUE, type = "lower",
+               outline.col = "white", lab = T,lab_size = input$labelsize)
           }
           vals$p=p
           p
@@ -111,7 +159,11 @@ corrmServer <- function(id) {
           if(input$color == "color1"){
             p=ggcorrplot(corr, hc.order = TRUE, type = "lower",
                outline.col = "white", colors = c("#6D9EC1", "white", "#E46726"),lab = T,lab_size = input$labelsize)
+          }else if(input$color == "color2"){
+            p=ggcorrplot(corr, hc.order = TRUE, type = "lower",
+               outline.col = "white", lab = T,lab_size = input$labelsize)
           }
+          vals$p=p
           p
       })
 
@@ -137,6 +189,31 @@ corrmServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="corrMplot.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="corrMplot.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="corrMplot.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

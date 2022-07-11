@@ -25,7 +25,7 @@ vennUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also support txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -49,13 +49,44 @@ vennUI <- function(id) {
             ),
           numericInput(ns("w"), label = "Figure Width", value = 8),
           numericInput(ns("h"), label = "Figure Height", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="Download PDF Figure",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
+                  )
         )
     )
   )
@@ -100,14 +131,31 @@ vennServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
-        d=read.table(input$vennfile1$datapath,
-          header = TRUE,
-          sep=",",
-          check.names=FALSE,
-          quote = "",
-          comment.char="",
-          fill=TRUE
-          )
+        if(file_ext(input$vennfile1$datapath) == "csv"){
+          d=read.table(input$vennfile1$datapath,
+            header = TRUE,
+            sep=",",
+            check.names=FALSE,
+            quote = "",
+            comment.char="",
+            fill=TRUE
+            )
+        }else if(file_ext(input$vennfile1$datapath) == "txt"){
+          d=read.table(input$vennfile1$datapath,
+            header = TRUE,
+            sep="\t",
+            check.names=FALSE,
+            quote = "",
+            comment.char="",
+            fill=TRUE
+            )
+        }else if(file_ext(input$vennfile1$datapath) == "xls"){
+          d=readxl::read_xls(input$vennfile1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$vennfile1$datapath) == "xlsx"){
+          d=readxl::read_xlsx(input$vennfile1$datapath)
+          d=as.data.frame(d)
+        }
         if(is.numeric(d[,1])){
           group=names(d)
           mergegene=list()
@@ -199,6 +247,7 @@ vennServer <- function(id) {
             stroke_size = 0.5, set_name_size = 4
           )
         }
+        vals$p=p
         p
       })
 
@@ -224,6 +273,31 @@ vennServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="venn.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="venn.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="venn.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

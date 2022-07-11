@@ -24,7 +24,7 @@ pieUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also support txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -46,15 +46,47 @@ pieUI <- function(id) {
                multiple = FALSE,
                selected = "color1"
             ),
+          numericInput(ns("ls"), label = "Label Size", value = 5),
           numericInput(ns("w"), label = "Figure Width", value = 8),
           numericInput(ns("h"), label = "Figure Height", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="Download PDF Figure",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
+                  )
         )
     )
   )
@@ -77,7 +109,7 @@ pieServer <- function(id) {
           )
         d[is.na(d)] <- ""
         modalDialog(
-          span('Color1 supports 8 colors, color2 supports 12 colors, color3 support 9 colors.'),
+          span('Color1 supports up to 8 groups, color2 supports up to 12 groups, color3 support up to 9 groups.'),
           tags$hr(),
           renderTable(d[1:20,],rownames=FALSE),
           easyClose=TRUE,
@@ -99,7 +131,17 @@ pieServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           d=read.table(input$file1$datapath,header=T,sep=",",comment.char="",quote="",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=T,sep="\t",comment.char="",quote="",check.names=FALSE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          d=readxl::read_xls(input$file1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          d=readxl::read_xlsx(input$file1$datapath)
+          d=as.data.frame(d)
+        }
           x=table(d[,1])
           x=as.data.frame(x)
           x$percent=round(x$Freq/sum(x$Freq) * 100,2)
@@ -116,7 +158,7 @@ pieServer <- function(id) {
                 geom_bar(stat="identity", width=1, color="white") +
                 coord_polar("y", start=0) +
                 scale_fill_brewer(palette="Set2")+
-                geom_text(aes(y = ypos, label = labels, size=6)) +
+                geom_text(aes(y = ypos, label = labels),size=input$ls) +
                 theme_void()+
                 theme(legend.position="none")
           }else if(input$color == "color2"){
@@ -124,7 +166,7 @@ pieServer <- function(id) {
                 geom_bar(stat="identity", width=1, color="white") +
                 coord_polar("y", start=0) +
                 scale_fill_brewer(palette="Set3")+
-                geom_text(aes(y = ypos, label = labels, size=6)) +
+                geom_text(aes(y = ypos, label = labels),size=input$ls) +
                 theme_void()+
                 theme(legend.position="none")
           }else if (input$color == "color3"){
@@ -132,7 +174,7 @@ pieServer <- function(id) {
                 geom_bar(stat="identity", width=1, color="white") +
                 coord_polar("y", start=0) +
                 scale_fill_brewer(palette="Set1")+
-                geom_text(aes(y = ypos, label = labels, size=6)) +
+                geom_text(aes(y = ypos, label = labels),size=input$ls) +
                 theme_void()+
                 theme(legend.position="none")
           }
@@ -159,7 +201,7 @@ pieServer <- function(id) {
                 geom_bar(stat="identity", width=1, color="white") +
                 coord_polar("y", start=0) +
                 scale_fill_brewer(palette="Set2")+
-                geom_text(aes(y = ypos, label = labels, size=6)) +
+                geom_text(aes(y = ypos, label = labels),size=input$ls) +
                 theme_void()+
                 theme(legend.position="none")
         }else if(input$color == "color2"){
@@ -167,7 +209,7 @@ pieServer <- function(id) {
                 geom_bar(stat="identity", width=1, color="white") +
                 coord_polar("y", start=0) +
                 scale_fill_brewer(palette="Set3")+
-                geom_text(aes(y = ypos, label = labels, size=6)) +
+                geom_text(aes(y = ypos, label = labels),size=input$ls) +
                 theme_void()+
                 theme(legend.position="none")
         }else if (input$color == "color3"){
@@ -175,10 +217,11 @@ pieServer <- function(id) {
                 geom_bar(stat="identity", width=1, color="white") +
                 coord_polar("y", start=0) +
                 scale_fill_brewer(palette="Set1")+
-                geom_text(aes(y = ypos, label = labels, size=6)) +
+                geom_text(aes(y = ypos, label = labels),size=input$ls) +
                 theme_void()+
                 theme(legend.position="none")
         }
+        vals$p=p
         p
       })
 
@@ -204,6 +247,31 @@ pieServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="pieplot.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="pieplot.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="pieplot.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

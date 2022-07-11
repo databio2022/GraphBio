@@ -10,9 +10,9 @@ cdcUI <- function(id) {
   tagList(
     fluidRow(
         box(title="累积分布曲线",solidHeader=TRUE,status='primary',background = "white",
-            plotOutput(ns("plot"),height=600) %>% withSpinner(color="#0dc5c1",type = 5,size=0.5),width=8,
-                    tags$hr(),
-                    tags$h6("该工具使用了R包ggplot2。如果在您的研究工作中使用到该工具，请引用该网址(GraphBio: www.graphbio1.com)和ggplot2包。")),
+            plotOutput(ns("plot"),height=600) %>% withSpinner(color="#0dc5c1",type = 5,size=0.5),width=8),
+                    #tags$hr(),
+                    #tags$h6("该工具使用了R包ggplot2。如果在您的研究工作中使用到该工具，请引用该网址(GraphBio: www.graphbio1.com)和ggplot2包。")),
         box(width=4,
           # Input: Select a file ----
           actionBttn(
@@ -23,7 +23,7 @@ cdcUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("上传文件(csv格式或逗号分隔txt文件)"),
+          tags$h5("上传文件(支持csv、txt、xls、xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "查看示例文件",
@@ -53,13 +53,44 @@ cdcUI <- function(id) {
           ),
           numericInput(ns("w"), label = "下载图片宽度", value = 8),
           numericInput(ns("h"), label = "下载图片高度", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="下载PDF图片",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "图像分辨率", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="下载图片",
+                    status="success"
+                  )
         )
     )
   )
@@ -104,7 +135,17 @@ cdcServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plot <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           d=read.table(input$file1$datapath,header=T,sep=",",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          d=read.table(input$file1$datapath,header=T,sep="\t",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          d=readxl::read_xls(input$file1$datapath)
+          d=as.data.frame(d)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          d=readxl::read_xlsx(input$file1$datapath)
+          d=as.data.frame(d)
+        }
           if(ncol(d) == 2){
             x=d[!is.na(d[,1]),1]
             y=d[!is.na(d[,2]),2]
@@ -179,6 +220,7 @@ cdcServer <- function(id) {
               p=ggplot(d, aes(value, colour = group)) + stat_ecdf(geom="line",size=1)+theme_pubr(border=TRUE)+ylab("Cumulative fraction")+xlab('Value')+scale_color_manual(values = c("#6495ED", "#FF4500"))+
                   annotate(geom = 'text', label = text, x = Inf, y = -Inf, hjust = 1.2, vjust = -0.7)
         }
+        vals$p=p
         p
       })
 
@@ -204,6 +246,31 @@ cdcServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="cdcplot.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="cdcplot.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="cdcplot.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

@@ -78,6 +78,7 @@ ui <- dashboardPage(
       ),
       sidebarMenu(id="sidebar",
         sidebarHeader("Omics data visualization"),
+        menuItem("Help Center", tabName = "help", icon = ionicon(name="information-circle")),
         menuItem("Contact Us", tabName = "contact", icon = ionicon(name="call")),
         menuItem("FAQ", tabName = "faq", icon = ionicon(name="help-circle")),
         menuItem("Heatmap", tabName = "heatmap", icon = ionicon(name="arrow-forward"),selected=TRUE),
@@ -134,7 +135,7 @@ ui <- dashboardPage(
                       size = "sm",
                   ),  
                   tags$hr(),                
-                  tags$h5("Upload a gene expression file (csv or comma-separated file)"),
+                  tags$h5("Upload a gene expression file (support csv,txt,xls,xlsx)"),
                   actionBttn(
                      inputId = "show",
                      label = "view example file",
@@ -149,7 +150,7 @@ ui <- dashboardPage(
                             accept = c("text/csv",
                                      "text/comma-separated-values,text/plain",
                                      ".csv")),
-                  tags$h5("Upload a sample metadata file (csv or comma-separated file, optional)"),
+                  tags$h5("Upload a sample metadata file (support csv,txt,xls,xlsx, optional)"),
                   actionBttn(
                      inputId = "show1",
                      label = "view example file",
@@ -192,18 +193,77 @@ ui <- dashboardPage(
                    ),
                   numericInput("w", label = "Figure Width", value = 9),
                   numericInput("h", label = "Figure Height", value = 6),
-                  downloadBttn(
-                    outputId = "pdf",
-                    label="Download PDF Figure",
-                    style = "fill",
-                    color = "success",
-                    size='sm'
+                  numericInput("ppi", label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = "pdf",
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = "png",
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = "jpeg",
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = "tiff",
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
                   )
                 )
 
              
             )
             ),
+          tabItem(tabName = "help",
+            fluidRow(box(width=12,
+            title="Help Center",solidHeader=TRUE,status='primary',background = "white",height="100%",
+            tags$h2("Help Center"),
+            tags$hr(),
+            tags$p("GraphBio includes various of popular data visualization function modules for omics data, and each module follows same design priciple so as to let users use easily. 
+            GraphBio supports mutiple common inputfile formats including csv,txt(tab-separated),xls,xlsx, and mutiple common figure formats including pdf,png,jpeg,tiff can be easily downloaded.
+            Here, let's take heatmap as an example to demonstrate the abilities of GraphBio.
+            First of all, we need to click <heatmap> module on the left panel of GraphBio.Then we can see a parameters settings panel on the right of GraphBio."),
+            tags$img(src="x1.png",width="50%",height="50%"),
+            tags$p("Before upload a file, we need to click <view example file> button and view content style."),
+            tags$img(src="format.png",width="50%",height="50%"),
+            tags$p("Subsequently,we can prepare our own file via Excel software
+            according to reference example file. The prepared file can be saved as one of four formats(csv,txt,xls,xlsx)."),
+            tags$img(src="heatmap1.png",width="50%",height="50%"),
+            tags$p("Then upload the file by clicking <Browse...> button.
+            When the upload flow is complete, the figure is automaticly made."),
+            tags$img(src="show.png",width="50%",height="50%"),
+            tags$p("Usually, we possiably want to add a group annotation bar on the figure.Thus, we can upload another sample
+            metadata file."),
+            tags$img(src="heatmap2.png"),
+            tags$img(src="show1.png",width="50%",height="50%"),
+            tags$p("Moreover,we provided mutiple popular color presets selections and other necessary cutomization settings,users can freely test these settings.Finally,we prodvied mutiple popular figure formats for users to download."),
+            tags$img(src="settings.png",width="50%",height="50%")
+            
+            )
+            )
+          ),
           tabItem(tabName = "contact",
             fluidRow(box(width=12,
             title="Contact Us",solidHeader=TRUE,status='primary',background = "white",height=800,
@@ -221,10 +281,11 @@ ui <- dashboardPage(
             title="FAQ",solidHeader=TRUE,status='primary',background = "white",height=800,
             tags$h2("FAQ"),
             tags$hr(),
-            tags$p("1. When we save file as csv format in Mircosoft Excel，please do not select csv UTF-8 format."),
-            tags$p("2. When clicking [run example] button, the generated figure can only be viewed instead of being downloaded."),
-            tags$p("3. When clicking [view example file] button, example file only show part data for demonstrating the format of input file."),
-            tags$p("4. The downloaded PDF figures can be easily edited using Adobe Illustrator or Adobe Acrobat software.")
+            tags$p("1. GraphBio limits file uploads to 5MB per file."),
+            tags$p("2. When we save file as csv format in Mircosoft Excel，please do not select csv UTF-8 format."),
+            tags$p("3. When clicking [run example] button, the generated figure can only be viewed instead of being downloaded."),
+            tags$p("4. When clicking [view example file] button, example file only show part data for demonstrating the format of input file."),
+            tags$p("5. The downloaded PDF figures can be easily edited using Adobe Illustrator or Adobe Acrobat software.")
               )
             )
           ),
@@ -300,7 +361,7 @@ server <- function(input, output, session) {
 
       dataModalx <- function(failed = FALSE) {
         modalDialog(
-          span('Note: the samples in metadata file must keep the same order with that of gene expression file.'),
+          span('Note: the samples in metadata file must keep the same order with that of gene expression file. Support two or more groups.'),
           tags$hr(),
           renderTable(example1[1:6,],rownames=FALSE),
           easyClose=TRUE,
@@ -321,6 +382,7 @@ server <- function(input, output, session) {
       })
       #main content
       #example
+      vals=reactiveValues()
       heatmape <- reactive({
             d=example
             d=d[which(apply(d,1,sd) > 0),]
@@ -386,6 +448,7 @@ server <- function(input, output, session) {
                         p=pheatmap(d,scale="none",annotation_col=annotation_col,color=colorRampPalette(c("navy", "white", "firebrick3"))(1000),show_rownames=input$rowname,show_colnames=input$colname,cluster_cols=F,border_color=NA,clustering_method="average",clustering_distance_cols="correlation",clustering_distance_rows="correlation")
                                 }                   
                 }
+            vals$p=p
             p
         })
 
@@ -395,17 +458,45 @@ server <- function(input, output, session) {
         })
       })
       #input file
-      vals=reactiveValues()
+     
       heatmap <- reactive({
             req(input$file1)
-            d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep=",",quote="",comment.char = "",check.names=FALSE)
+            if(file_ext(input$file1$datapath) == "csv"){
+                d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep=",",quote="",comment.char = "",check.names=FALSE)
+            }else if(file_ext(input$file1$datapath) == "txt"){
+                d=read.table(input$file1$datapath,header=TRUE,row.names=1,sep="\t",quote="",comment.char = "",check.names=FALSE)
+            }else if(file_ext(input$file1$datapath) == "xls"){
+                d=readxl::read_xls(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }else if(file_ext(input$file1$datapath) == "xlsx"){
+                d=readxl::read_xlsx(input$file1$datapath)
+                d=as.data.frame(d)
+                rownames(d)=d[,1]
+                d=d[,-1]
+            }
             d=d[which(apply(d,1,sd) > 0),]
             d=t(scale(t(d)))
             d[d > 1.5]=1.5
             d[d < -1.5]=-1.5
             vals$d=d
             if(!is.null(input$file2$datapath)){
+              if(file_ext(input$file2$datapath) == "csv"){
                 grp=read.table(input$file2$datapath,header=TRUE,row.names=1,sep=",",quote="",comment.char = "",check.names=FALSE)
+              }else if(file_ext(input$file2$datapath) == "txt"){
+                grp=read.table(input$file2$datapath,header=TRUE,row.names=1,sep="\t",quote="",comment.char = "",check.names=FALSE)
+              }else if(file_ext(input$file2$datapath) == "xls"){
+                grp=readxl::read_xls(input$file2$datapath)
+                grp=as.data.frame(grp)
+                rownames(grp)=grp[,1]
+                grp=grp[,-1]
+              }else if(file_ext(input$file2$datapath) == "xlsx"){
+                grp=readxl::read_xlsx(input$file2$datapath)
+                grp=as.data.frame(grp)
+                rownames(grp)=grp[,1]
+                grp=grp[,-1]
+              }
                 annotation_col = data.frame(name=factor(grp$group))
                 rownames(annotation_col) = colnames(d)
                 #pheatmap(d,scale="none",annotation_col = annotation_col,color=colorRampPalette(viridis(3))(100),show_rownames=F,show_colnames=F,cluster_method="average",clustering_distance_cols="correlation",clustering_distance_rows="correlation")
@@ -541,6 +632,31 @@ server <- function(input, output, session) {
             dev.off()
           }
         )
+      output$png <- downloadHandler(
+        filename="heatmap.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="heatmap.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="heatmap.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
 
 }
 

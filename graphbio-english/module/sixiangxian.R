@@ -25,7 +25,7 @@ sixiangxianUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("Upload a csv or comma-separated file"),
+          tags$h5("Upload a csv file(also supprot txt,xls,xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "view example file",
@@ -61,13 +61,44 @@ sixiangxianUI <- function(id) {
             ),
           numericInput(ns("w"), label = "Figure Width", value = 8),
           numericInput(ns("h"), label = "Figure Height", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="Download PDF Figure",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "Figure Resolution", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF figure",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="Download Figure",
+                    status="success"
+                  )
         )
     )
   )
@@ -107,7 +138,17 @@ sixiangxianServer <- function(id) {
       # The user's data, parsed into a data frame
       vals=reactiveValues()
       plota <- reactive({
+        if(file_ext(input$file1$datapath) == "csv"){
           do=read.table(input$file1$datapath,header=T,sep=",",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "txt"){
+          do=read.table(input$file1$datapath,header=T,sep="\t",comment.char="",quote="",check.names=FALSE,fill=TRUE)
+        }else if(file_ext(input$file1$datapath) == "xls"){
+          do=readxl::read_xls(input$file1$datapath)
+          do=as.data.frame(do)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          do=readxl::read_xlsx(input$file1$datapath)
+          do=as.data.frame(do)
+        }
           names(do)=c("geneid","log2FoldChange","padj_a","diff.log2.fc","padj_b","label")
           group="none"
           da=data.frame(do,group)
@@ -235,6 +276,7 @@ sixiangxianServer <- function(id) {
                     point.padding=unit(0.5, "lines"),
                     segment.colour = "purple",segment.size = 0.5,segment.alpha = 0.5,max.overlaps = Inf)+geom_point(data = da[da$label!="",], color = "purple")+labs(color="class")
           }
+          vals$p=p
           p
       })
 
@@ -260,6 +302,31 @@ sixiangxianServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="sixiangxian_plot.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="sixiangxian_plot.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="sixiangxian_plot.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }

@@ -26,7 +26,7 @@ circledendUI <- function(id) {
               size = "sm"
           ),  
           tags$hr(),                
-          tags$h5("上传边信息文件(csv格式或逗号分隔txt文件，必选)"),
+          tags$h5("上传边信息文件(支持csv、txt、xls、xlsx)"),
           actionBttn(
              inputId = ns("show"),
              label = "查看示例文件",
@@ -41,7 +41,7 @@ circledendUI <- function(id) {
                     accept = c("text/csv",
                              "text/comma-separated-values,text/plain",
                              ".csv")),
-          tags$h5("上传节点信息文件(csv格式或逗号分隔txt文件，必选)"),
+          tags$h5("上传节点信息文件(支持csv、txt、xls、xlsx)"),
           actionBttn(
              inputId = ns("show1"),
              label = "查看示例文件",
@@ -67,13 +67,44 @@ circledendUI <- function(id) {
             ),
           numericInput(ns("w"), label = "下载图片宽度", value = 10),
           numericInput(ns("h"), label = "下载图片高度", value = 8),
-          downloadBttn(
-            outputId = ns("pdf"),
-            label="下载PDF图片",
-            style = "fill",
-            color = "success",
-            size='sm'
-          )
+          numericInput(ns("ppi"), label = "图像分辨率", value = 72),
+                  dropdownButton(
+                    downloadBttn(
+                      outputId = ns("pdf"),
+                      label="PDF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("png"),
+                      label="PNG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("jpeg"),
+                      label="JPEG图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    downloadBttn(
+                      outputId = ns("tiff"),
+                      label="TIFF图片",
+                      style = "fill",
+                      color = "success",
+                      size='sm',
+                      block=TRUE
+                    ),
+                    circle=FALSE,
+                    label="下载图片",
+                    status="success"
+                  )
         )
     )
   )
@@ -130,9 +161,29 @@ circledendServer <- function(id) {
       vals=reactiveValues()
       plota <- reactive({
           # create a data frame giving the hierarchical structure of your individuals
-          edges=read.table(input$file1$datapath,header=TRUE,sep=",",check.names=FALSE)
+          if(file_ext(input$file1$datapath) == "csv"){
+            edges=read.table(input$file1$datapath,header=TRUE,sep=",",check.names=FALSE)
+          }else if(file_ext(input$file1$datapath) == "txt"){
+            edges=read.table(input$file1$datapath,header=TRUE,sep="\t",check.names=FALSE)
+          }else if(file_ext(input$file1$datapath) == "xls"){
+          edges=readxl::read_xls(input$file1$datapath)
+          edges=as.data.frame(edges)
+        }else if(file_ext(input$file1$datapath) == "xlsx"){
+          edges=readxl::read_xlsx(input$file1$datapath)
+          edges=as.data.frame(edges)
+        }
           # create a vertices data.frame. One line per object of our hierarchy
-          vertices = read.table(input$file2$datapath,header=TRUE,sep=",",check.names=FALSE)
+          if(file_ext(input$file2$datapath) == "csv"){
+            vertices = read.table(input$file2$datapath,header=TRUE,sep=",",check.names=FALSE)
+          }else if(file_ext(input$file2$datapath) == "txt"){
+            vertices = read.table(input$file2$datapath,header=TRUE,sep="\t",check.names=FALSE)
+          }else if(file_ext(input$file2$datapath) == "xls"){
+          vertices=readxl::read_xls(input$file2$datapath)
+          vertices=as.data.frame(vertices)
+        }else if(file_ext(input$file2$datapath) == "xlsx"){
+          vertices=readxl::read_xlsx(input$file2$datapath)
+          vertices=as.data.frame(vertices)
+        }
           colnames(vertices)=c("name","log2FC","group")
           # Create a graph object
           mygraph <- graph_from_data_frame( edges, vertices=vertices ) 
@@ -225,6 +276,7 @@ circledendServer <- function(id) {
               )+
               expand_limits(x = c(-1.3, 1.3), y = c(-1.3, 1.3))
           }
+          vals$p=p
           p
       })
 
@@ -252,6 +304,31 @@ circledendServer <- function(id) {
           dev.off()
         }
       )
+      output$png <- downloadHandler(
+        filename="circle_dend.png",
+        content = function(file){
+          png(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$jpeg <- downloadHandler(
+        filename="circle_dend.jpeg",
+        content = function(file){
+          jpeg(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+      output$tiff <- downloadHandler(
+        filename="circle_dend.tiff",
+        content = function(file){
+          tiff(file,width=input$w,height=input$h,units="in",res=input$ppi)
+          print(vals$p)
+          dev.off()
+        }
+      )
+
     }
   )    
 }
