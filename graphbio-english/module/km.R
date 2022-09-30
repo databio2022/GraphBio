@@ -10,7 +10,7 @@ kmUI <- function(id) {
   ns <- NS(id)
   tagList(
     fluidRow(
-        box(title="Survial Curves",solidHeader=TRUE,status='primary',background = "white",
+        box(title="Survival Curves",solidHeader=TRUE,status='primary',background = "white",
             plotOutput(ns("plot"),height=600) %>% withSpinner(color="#0dc5c1",type = 5,size=0.5),width=8
                   #  tags$hr(),
                   #  tags$h6("该工具使用了R包ggplot2、survival和survminer。如果在您的研究工作中使用到该工具，请引用该网址(GraphBio: www.graphbio1.com)和ggplot2、survival及survminer包。")
