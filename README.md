@@ -8,6 +8,6 @@ Cite: Zhao T and Wang Z (2022), GraphBio: A shiny web app to easily perform popu
 #### Use GraphBio in local system
 On Linux:
 1. `docker pull databio2022/graphbio:v1.0`
-2. `docker run --rm -d -p 80:3838 -v /root/enlog/:/home/shiny/graphbio-log/ graphbio:v1.0 /init`
-3. Open Chrome browser and input 'localhost'. You can use GraphBio locally.
+2. `docker run --rm -d -p 80:3838 -v /root/enlog/:/home/shiny/graphbio-log/ databio2022/graphbio:v1.0 /init`
+3. Open Chrome browser and input `localhost`. You can use GraphBio locally.
 
