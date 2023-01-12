@@ -5,12 +5,6 @@ Website: http://www.graphbio1.com/ (chinese version) or http://www.graphbio1.com
 
 Cite: Zhao T and Wang Z (2022), GraphBio: A shiny web app to easily perform popular visualization analysis for omics data. Front. Genet. 13:957317.doi: 10.3389/fgene.2022.957317
 
-#### Use GraphBio in local system
-On Linux:
-1. `docker pull databio2022/graphbio:v1.0`
-2. `docker run --rm -d -p 80:3838 -v /root/enlog/:/home/shiny/graphbio-log/ databio2022/graphbio:v1.0 /init`
-3. Open Chrome browser and input `localhost`. You can use GraphBio locally.
-
 #### Demo data for each visualization function (files are placed in the graphbio-english/www/ directory)
 1. heatmap_test.csv and group_info.csv for heatmap.
 2. volcano_example.csv and volcano_example1.csv for volcano plot.
