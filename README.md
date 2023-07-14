@@ -1,9 +1,16 @@
-# GraphBio
+# GraphBio---A modular and scalable R Shiny dashboard
 GraphBio: a shiny web app to easily perform popular visualization analysis for omics data
 
 Website: http://www.graphbio1.com/ (chinese version) or http://www.graphbio1.com/en/ (english version)
 
 Cite: Zhao T and Wang Z (2022), GraphBio: A shiny web app to easily perform popular visualization analysis for omics data. Front. Genet. 13:957317.doi: 10.3389/fgene.2022.957317
+
+# Deploying to your own web server with docker.
+`docker pull databio2022/graphbio:v2.2.7-manual`
+`docker run --rm -d -p 80:3838 -v /root/log/:/home/shiny/graphbio-log/ databio2022/graphbio:v2.2.7-manual /init`
+
+For english version, please use:
+`docker pull databio2022/graphbio:v2.2.5-en-manual`
 
 #### Demo data for each visualization function (files are placed in the graphbio-english/www/ directory)
 1. heatmap_test.csv and group_info.csv for heatmap.
