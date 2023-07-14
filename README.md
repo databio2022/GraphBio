@@ -10,7 +10,8 @@ Cite: Zhao T and Wang Z (2022), GraphBio: A shiny web app to easily perform popu
 `docker run --rm -d -p 80:3838 -v /root/log/:/home/shiny/graphbio-log/ databio2022/graphbio:v2.2.7-manual /init`
 
 For english version, please use: <br>
-`docker pull databio2022/graphbio:v2.2.5-en-manual`
+`docker pull databio2022/graphbio:v2.2.5-en-manual` <br>
+`docker run --rm -d -p 80:3838 -v /root/log/:/home/shiny/graphbio-log/ databio2022/graphbio:v2.2.5-en-manual /init`
 
 #### Demo data for each visualization function (files are placed in the graphbio-english/www/ directory)
 1. heatmap_test.csv and group_info.csv for heatmap.
