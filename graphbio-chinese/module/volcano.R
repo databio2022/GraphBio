@@ -43,6 +43,13 @@ volcanoUI <- function(id) {
           numericInput(ns("pval"), label = "显著性阈值(P值 或者 FDR)", value = 0.05),
           numericInput(ns("fc"), label = "log2倍数变化", value = 1),
           pickerInput(
+            inputId = ns("YScale"),
+            label = "Y轴坐标非线性化", 
+            choices = c('Linearized', 'log1p'),
+            multiple = FALSE,
+            selected = "Linearized"
+          ),
+          pickerInput(
                inputId = ns("color"),
                label = "选择颜色", 
                choices = paste0("color", 1:3),
@@ -51,6 +58,8 @@ volcanoUI <- function(id) {
             ),
           numericInput(ns("ps"), label = "点大小", value = 2),
           numericInput(ns("ls"), label = "标签大小", value = 4),
+          # sliderInput(ns('LabelMaxOverLap'), label = '调整标签Overlap',min = 1,max = 1000, value = 15),
+          # checkboxInput(ns("LabelReprel"),label = "标签位置自动调整", TRUE),
           numericInput(ns("w"), label = "下载图片宽度", value = 8),
           numericInput(ns("h"), label = "下载图片高度", value = 9),
           numericInput(ns("ppi"), label = "图像分辨率", value = 72),
@@ -165,22 +174,31 @@ volcanoServer <- function(id) {
               }
               
               p=ggplot(data=d, aes(x=log2FC,y=log10,color=class,label=label)) + 
-                  geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"),size=input$ps)+
+                geom_point(data = d[d$class=="UP",],aes(y=log10,color="UP"),size=input$ps)+
                   geom_point(data = d[d$class=="none",],aes(y=log10,color="none"),size=input$ps)+
                   geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"),size=input$ps)+
                   scale_color_manual(values = colors)+
                   ylab(paste0("-log10 ",names(d)[2]))+xlab("Log2FoldChange")+
-                  theme_pubr(base_size = 12,border=TRUE)+geom_hline(yintercept=-log10(input$pval), linetype="dashed", 
-                      color = "black", size=0.5)+geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", 
-                      color = "black", size=0.5)+geom_label_repel(
-                      size=input$ls,
-                      fontface="bold",
-                      color="purple",
-                      box.padding=unit(1, "lines"),
-                      point.padding=unit(0.5, "lines"),
-                      segment.colour = "purple",segment.size = 0.5,segment.alpha = 0.5,max.overlaps = Inf)+geom_point(data = d[d$label!="",], color = "purple")+
-                      annotate(geom = 'text', label = paste0('UP_Number: ', up_num), x = Inf, y = Inf, hjust = 1.1, vjust = 1.5)+
-                      annotate(geom = 'text', label = paste0('DOWN_Number: ', down_num), x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5)+labs(color = "class")
+                  theme_pubr(base_size = 12,border=TRUE)+
+                geom_hline(yintercept=-log10(input$pval), linetype="dashed", color = "black", size=0.5)+
+                geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", color = "black", size=0.5)+
+                geom_text_repel(size=input$ls,fontface="bold",color="purple", 
+                                # box.padding=unit(1, "lines"),
+                                #point.padding=unit(0.5, "lines"),
+                                segment.colour = "purple",
+                                # segment.size = 0.5,
+                                segment.alpha = 0.5,max.overlaps = +Inf)+
+                geom_point(data = d[d$label!="",], color = "purple")+
+                annotate(geom = 'text', label = paste0('UP_Number: ', up_num), x = Inf, y = Inf, hjust = 1.1, vjust = 1.5)+
+                annotate(geom = 'text', label = paste0('DOWN_Number: ', down_num), x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5)+
+                labs(color = "class")
+              
+              # if (input$LabelReprel) {
+              #   p <- p + geom_text_repel(size=input$ls,fontface="bold",color="purple", box.padding=unit(1, "lines"),
+              #                   point.padding=unit(0.5, "lines"), segment.colour = "purple",segment.size = 0.5,segment.alpha = 0.5,max.overlaps = +Inf)
+              # }else{
+              #   p <- p + geom_text(size=input$ls,fontface="bold",color="purple")
+              # }
           }else{
               names(d)[1]=c("log2FC")
               d=d[!is.na(d[,2]),]
@@ -205,12 +223,18 @@ volcanoServer <- function(id) {
                   geom_point(data = d[d$class=="DOWN",],aes(y=log10,color="DOWN"),size=input$ps)+
                   scale_color_manual(values = colors)+
                   ylab(paste0("-log10 ",names(d)[2]))+xlab("Log2FoldChange")+
-                  theme_pubr(base_size = 12,border=TRUE)+geom_hline(yintercept=-log10(input$pval), linetype="dashed", 
-                      color = "black", size=0.5)+geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", 
+                  theme_pubr(base_size = 12,border=TRUE)+
+                geom_hline(yintercept=-log10(input$pval), linetype="dashed", 
+                      color = "black", size=0.5)+
+                geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", 
                       color = "black", size=0.5)+
                       annotate(geom = 'text', label = paste0('UP_Number: ', up_num), x = Inf, y = Inf, hjust = 1.1, vjust = 1.5)+
-                      annotate(geom = 'text', label = paste0('DOWN_Number: ', down_num), x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5)+labs(color = "class")
+                      annotate(geom = 'text', label = paste0('DOWN_Number: ', down_num), x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5)+
+                labs(color = "class")
 
+          }
+          if (input$YScale != 'Linearized') {
+            p <- p + scale_y_continuous(trans=input$YScale)
           }
           vals$p=p
           p
@@ -244,16 +268,23 @@ volcanoServer <- function(id) {
               scale_color_manual(values = colors)+
               ylab(paste0("-log10 ",names(d)[2]))+xlab("Log2FoldChange")+
               theme_pubr(base_size = 12,border=TRUE)+geom_hline(yintercept=-log10(input$pval), linetype="dashed", 
-                  color = "black", size=0.5)+geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", 
-                  color = "black", size=0.5)+geom_label_repel(
-                  size=input$ls,
-                  fontface="bold",
-                  color="purple",
-                  box.padding=unit(1, "lines"),
-                  point.padding=unit(0.5, "lines"),
-                  segment.colour = "purple",segment.size = 0.5,segment.alpha = 0.5,max.overlaps = Inf)+geom_point(data = d[d$label!="",], color = "purple")+
-                  annotate(geom = 'text', label = paste0('UP_Number: ', up_num), x = Inf, y = Inf, hjust = 1.1, vjust = 1.5)+
-                  annotate(geom = 'text', label = paste0('DOWN_Number: ', down_num), x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5)+labs(color = "class")
+                  color = "black", size=0.5)+
+            geom_vline(xintercept=c(-input$fc,input$fc), linetype="dashed", 
+                  color = "black", size=0.5) +
+            geom_text_repel(size=input$ls,fontface="bold",color="purple",
+                  #box.padding=unit(1, "lines"),
+                  #point.padding=unit(0.5, "lines"),
+                  segment.colour = "purple",
+                  #segment.size = 0.5,
+                  segment.alpha = 0.5,
+                  max.overlaps = +Inf)+
+            geom_point(data = d[d$label!="",], color = "purple") +
+            annotate(geom = 'text', label = paste0('UP_Number: ', up_num), x = Inf, y = Inf, hjust = 1.1, vjust = 1.5)+
+            annotate(geom = 'text', label = paste0('DOWN_Number: ', down_num), x = -Inf, y = Inf, hjust = -0.1, vjust = 1.5)+labs(color = "class")
+            
+          if (input$YScale != 'Linearized') {
+            p <- p + scale_y_continuous(trans=input$YScale)
+          }
           vals$p=p
           p
       })
