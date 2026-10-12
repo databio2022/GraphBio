@@ -1,0 +1,276 @@
+# GraphBio (english) app-layer bundle builder for the ShinyApps store (Route A).
+# Place at  fentouxungui/GraphBio/.github/workflows/graphbio-build-app-bundle.yml
+#            on the DEFAULT branch = master.  No shell rebuild is required.
+#
+# Produces, per platform:  graphbio-<store-version>-<platform>.zip
+#   bundle/  +- manifest.json  +- app/**  +- rlib/<Pkg>/
+#            (prebuilt CRAN binaries pinned to R 4.6.1; geomnet built from source)
+#
+# Contract check (same onboarding as iSEE / UCSCXenaShiny / spatialLIBD / beeRapp /
+# CSBB-Shiny / SeuratExplorer / shinyCircos / scConvert):
+#   * The repo hosts TWO standalone Shiny apps, graphbio-chinese/ and
+#     graphbio-english/. This workflow packages graphbio-english/ ONLY.
+#   * graphbio-english/ is a CLASSIC single-file Shiny app:
+#       app.R       -> defines `ui` + `server` and calls shinyApp(ui, server)
+#       module/*.R  -> 15 feature modules, source()d by app.R via relative paths
+#       www/        -> example data + images (read with ./www/... relative paths)
+#       js/         -> d3 helper (my_bubble.js for r2d3) + Baidu analytics beacon
+#       py_scripts/ -> bert_vec_get.py (Cluster Analysis helper, see notes)
+#     Because app.R already returns a valid app object, NO entry is synthesized
+#     from scratch. Upstream app.R is copied verbatim as app/graphbio-app.R and a
+#     one-time entry app/app.R sets a couple of options, sources it, and returns
+#     the resulting shiny.appobj. The shell launches with shiny::runApp("app"),
+#     i.e. exactly what shiny::runApp("graphbio-english") does upstream.
+#     No upstream source file is modified.
+#
+# Notes / gotchas handled here:
+#   * NOT an R package: no DESCRIPTION / no `R CMD build`. The dependency seed is
+#     the union of library() calls in app.R + module/*.R, plus readxl (used via
+#     readxl:: in the Cluster Analysis module).
+#   * CRAN closure (shiny, bs4Dash, shinyWidgets, shinycssloaders, shinyFiles, DT,
+#     shinyjs, pheatmap, viridis, ggplotify, waiter, r2d3, ggplot2, RColorBrewer,
+#     GOplot, ggcorrplot, ggpubr, survival, survminer, ggrepel, FactoMineR,
+#     factoextra, pROC, ggvenn, VennDiagram, readxl). Installed in two passes:
+#     prebuilt binaries first, then a source fallback for packages with no binary
+#     for the pinned R release.
+#   * geomnet (Network Plot module) was ARCHIVED on CRAN (2021-06-21); it is
+#     installed from its CRAN-archive source tarball (0.3.1) and its declared
+#     imports (sna, network, dplyr, tidyr, readr, plotly) are added to the closure.
+#   * RUNTIME LIMITATION: the "Cluster Analysis" module shells out to a local
+#     miniconda python (./miniconda3/envs/bert-as-service/bin/python) and a remote
+#     BERT-as-service server (119.3.218.106) via ./py_scripts/bert_vec_get.py, and
+#     writes ./tmp. That module does NOT run in the desktop bundle; the other 14
+#     modules are self-contained and offline. This is disclosed in the manifest.
+#   * Upload size: the upstream site caps uploads at 5 MB (server protection). The
+#     desktop entry raises shiny.maxRequestSize to 1 GiB (local app, no shared server).
+#   * The UI pulls Font Awesome and a Baidu Analytics beacon over the network;
+#     both are cosmetic and degrade gracefully offline.
+
+name: Build app bundle
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to attach bundles to"
+        required: false
+        type: string
+        default: "v0.1.0"
+
+permissions:
+  contents: write
+
+env:
+  APP_ID: graphbio
+  APP_NAME: GraphBio
+  APP_AUTHOR: "Tao Zhao, Zhen Wang"
+  APP_DESC: "Modular Shiny dashboard for popular omics-data visualizations - heatmap, volcano, Venn, PCA, survival curve, ROC, GO dot plots, network, chord and more (15 modules)"
+  APP_HOMEPAGE: "http://www.graphbio1.com/en/"
+  APP_LICENSE: "GPL-3.0"
+  R_VERSION: "4.6.1"
+
+jobs:
+  bundle:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, platform: "win-x64" }
+          - { os: macos-14,       platform: "mac-arm64" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ env.R_VERSION }}
+          use-public-rspm: true
+
+      - name: Install build helpers
+        shell: bash
+        run: Rscript -e 'install.packages(c("jsonlite","zip","digest","BiocManager"), repos="https://cloud.r-project.org")'
+
+      - name: Resolve store version
+        shell: bash
+        run: |
+          V="${{ github.event.release.tag_name }}${{ inputs.tag }}"
+          V="${V#v}"
+          if [ -z "$V" ]; then V="0.1.0"; fi
+          echo "VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: Assemble bundle (app/ + rlib/ + manifest.json)
+        shell: Rscript {0}
+        env:
+          GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bundle <- file.path(getwd(), "bundle")
+          unlink(bundle, recursive = TRUE); dir.create(bundle, recursive = TRUE)
+          appdir <- file.path(bundle, "app"); dir.create(appdir, recursive = TRUE)
+          lib <- file.path(bundle, "rlib"); dir.create(lib, recursive = TRUE)
+
+          # --- 1. copy the graphbio-english sources verbatim -----------------
+          src <- file.path(getwd(), "graphbio-english")
+          if (!file.exists(file.path(src, "app.R"))) stop("graphbio-english/app.R not found")
+          # upstream app.R is renamed so the generated entry can occupy app/app.R
+          if (!file.copy(file.path(src, "app.R"), file.path(appdir, "graphbio-app.R")))
+            stop("could not copy graphbio-english/app.R")
+          for (d in c("module", "www", "js", "py_scripts")) {
+            if (file.exists(file.path(src, d))) file.copy(file.path(src, d), appdir, recursive = TRUE)
+          }
+          for (f in c("LICENSE", "README.md")) {
+            p <- file.path(getwd(), f); if (file.exists(p)) file.copy(p, appdir)
+          }
+          for (chk in c("graphbio-app.R", "module/venn.R", "module/vis_net.R",
+                        "www/heatmap_test.csv", "js/baidu_analysis.js",
+                        "js/d3js/my_bubble.js")) {
+            if (!file.exists(file.path(appdir, chk))) stop("missing after copy: ", chk)
+          }
+
+          # --- 2. generate the app.R entry -----------------------------------
+          writeLines(c(
+            '# Auto-generated ShinyApps bundle entry for GraphBio (english).',
+            '# Upstream graphbio-english/app.R + module/*.R are copied unchanged (as',
+            '# graphbio-app.R) and sourced here; the app object is returned for runApp().',
+            'options(shiny.launch.browser = FALSE, shiny.deprecation.messages = FALSE,',
+            '        shiny.maxRequestSize = 1024 * 1024^2)',
+            'app <- source("graphbio-app.R")$value   # returns the shinyApp object',
+            'if (!inherits(app, "shiny.appobj")) stop("graphbio-app.R did not return a shiny app object")',
+            'app'
+          ), file.path(appdir, "app.R"))
+
+          # --- 3. install the dependency closure into bundle/rlib -----------
+          repos <- BiocManager::repositories()
+          options(repos = repos)
+
+          seed <- c("shiny","bs4Dash","shinyWidgets","shinycssloaders","shinyFiles","DT",
+                    "shinyjs","pheatmap","viridis","ggplotify","waiter","r2d3",
+                    "ggplot2","RColorBrewer","GOplot","ggcorrplot","ggpubr","survival",
+                    "survminer","ggrepel","FactoMineR","factoextra","pROC","ggvenn",
+                    "VennDiagram","readxl")
+
+          db <- available.packages(repos = repos)
+          cat("available packages:", nrow(db), "\n")
+          base_pkgs <- rownames(installed.packages(priority = "base"))
+
+          # geomnet is CRAN-archived: fetch its source tarball and read its imports.
+          geomnet_url <- "https://cran.r-project.org/src/contrib/Archive/geomnet/geomnet_0.3.1.tar.gz"
+          geomnet_tar <- file.path(getwd(), "geomnet_0.3.1.tar.gz")
+          if (!file.exists(geomnet_tar)) download.file(geomnet_url, geomnet_tar, mode = "wb", quiet = TRUE)
+          gt <- tempfile(); dir.create(gt)
+          utils::untar(geomnet_tar, exdir = gt)
+          gdesc <- list.files(gt, pattern = "^DESCRIPTION$", recursive = TRUE, full.names = TRUE)[1]
+          gd <- read.dcf(gdesc)
+          raw <- na.omit(unlist(gd[1, intersect(c("Depends","Imports"), colnames(gd))]))
+          gdeps <- trimws(sub("[[:space:]]*\\(.*\\)$", "",
+                       trimws(unlist(strsplit(paste(raw, collapse = ","), ",")))))
+          gdeps <- setdiff(gdeps[nzchar(gdeps) & gdeps != "R"], "ggplot2")
+          cat("geomnet imports:", paste(gdeps, collapse = ", "), "\n")
+
+          seed_cran <- setdiff(seed, "geomnet")
+          closure <- unique(c(seed_cran, gdeps,
+                     unlist(tools::package_dependencies(c(seed_cran, gdeps), db = db, recursive = TRUE))))
+          closure <- setdiff(closure, base_pkgs)
+          closure <- closure[closure %in% rownames(db)]
+          cat("closure packages to install:", length(closure), "\n")
+
+          install_into <- function(pkgs, type) {
+            if (!length(pkgs)) return(invisible())
+            install.packages(pkgs, lib = lib, repos = repos, type = type,
+                             dependencies = FALSE, Ncpus = 2)
+          }
+          lib_pkgs <- function() basename(list.dirs(lib, recursive = FALSE))
+
+          # Pass 1: prebuilt binaries (CRAN/Posit + Bioconductor where available).
+          install_into(closure, "binary")
+          pkgs_present <- lib_pkgs()
+          # Pass 2: source fallback for packages with no binary for this R release.
+          no_binary <- setdiff(closure, pkgs_present)
+          if (length(no_binary)) {
+            cat("no binary available, installing from source:", length(no_binary), "\n")
+            install_into(no_binary, "source")
+            pkgs_present <- lib_pkgs()
+          }
+          # geomnet from the CRAN-archive source tarball (pure R, no compiler needed).
+          install.packages(geomnet_tar, lib = lib, repos = NULL, type = "source", dependencies = FALSE)
+          pkgs_present <- lib_pkgs()
+
+          required <- setdiff(seed, base_pkgs)
+          missing <- setdiff(required, pkgs_present)
+          if (length(missing)) stop("packages missing from rlib: ", paste(missing, collapse = ", "))
+          cat("rlib packages:", length(pkgs_present), "\n")
+
+          # --- 4. write manifest.json ---------------------------------------
+          pkgs <- as.data.frame(installed.packages(lib.loc = lib))
+          man <- list(
+            schema = 1L,
+            id = Sys.getenv("APP_ID"), name = Sys.getenv("APP_NAME"), version = Sys.getenv("VERSION"),
+            author = Sys.getenv("APP_AUTHOR"), description = Sys.getenv("APP_DESC"),
+            homepage = Sys.getenv("APP_HOMEPAGE"), license = Sys.getenv("APP_LICENSE"),
+            runtime = "r-shiny", entry = "app/app.R",
+            platform = "${{ matrix.platform }}",
+            r_version = Sys.getenv("R_VERSION"), min_shell_version = "0.1.0",
+            notes = paste(
+              "Classic single-file Shiny app (english build): upstream app.R sources",
+              "module/*.R; wrapped by a generated app/app.R entry that sources it and",
+              "returns the shinyApp object. 15 modules; full CRAN closure prebuilt in",
+              "rlib; geomnet (Network Plot) built from its CRAN-archive source tarball.",
+              "KNOWN LIMITATION: the Cluster Analysis module needs a local miniconda",
+              "python (./miniconda3/envs/bert-as-service) and a remote BERT-as-service",
+              "server, so it does not run in the desktop bundle; the other 14 modules",
+              "are self-contained and offline. Uploads raised to 1 GiB (upstream site",
+              "caps at 5 MB)."),
+            packages = lapply(seq_len(nrow(pkgs)), function(i) list(
+              name = pkgs$Package[i], version = pkgs$Version[i],
+              path = file.path("rlib", pkgs$Package[i]), source = "cran"))
+          )
+          jsonlite::write_json(man, file.path(bundle, "manifest.json"), pretty = TRUE, auto_unbox = TRUE)
+
+      - name: Zip + sha256
+        shell: Rscript {0}
+        run: |
+          out <- sprintf("%s-%s-%s.zip", Sys.getenv("APP_ID"), Sys.getenv("VERSION"), "${{ matrix.platform }}")
+          bundle <- file.path(getwd(), "bundle")
+          old <- setwd(bundle); on.exit(setwd(old))
+          zip::zipr(out, files = list.files(".", all.files = TRUE, no.. = TRUE))
+          entries <- utils::unzip(out, list = TRUE)$Name
+          if (!any(grepl("^rlib/", entries))) stop("zip is missing rlib/ -- aborting")
+          if (!any(grepl("^app/app[.]R$", entries))) stop("zip is missing app/app.R -- aborting")
+          if (!any(grepl("^app/graphbio-app[.]R$", entries))) stop("zip is missing app/graphbio-app.R -- aborting")
+          if (!any(grepl("^app/module/", entries))) stop("zip is missing app/module/ -- aborting")
+          if (!any(grepl("^app/www/", entries))) stop("zip is missing app/www/ -- aborting")
+          if (!any(grepl("^app/js/", entries))) stop("zip is missing app/js/ -- aborting")
+          setwd(old)
+          file.rename(file.path(bundle, out), out)
+          sha <- digest::digest(out, algo = "sha256", file = TRUE)
+          sz <- file.size(out)
+          cat("bundle zip size (bytes):", sz, "\n")
+          if (sz > 2 * 1024^3) warning("bundle exceeds the 2 GiB GitHub Release asset limit.")
+          writeLines(sprintf('{"platform":"%s","file":"%s","sha256":"%s","size":%d}',
+                     "${{ matrix.platform }}", out, sha, sz),
+                     sprintf("meta-%s.json", "${{ matrix.platform }}"))
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.platform }}
+          path: |
+            *.zip
+            meta-*.json
+
+  release:
+    needs: bundle
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v') || inputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          files: artifacts/*.zip
